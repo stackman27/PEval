@@ -1,74 +1,126 @@
-import React, { useRef, useState, useEffect } from "react";
+import React, { useState } from "react";
 import { BrowserRouter as Router, Route, Routes } from "react-router-dom";
-import Chat from "./components/Chat/Chat";
-import ChatInfo from "./components/ChatInfo/ChatInfo";
-import InputForm from "./components/InputForm/InputForm";
+import { ChakraProvider, extendTheme } from "@chakra-ui/react";
 import Navbar from "./components/Navbar/Navbar";
 import Settings from "./settings/Settings";
+import PromptEngineeringStudio from "./components/PromptEngineeringStudio/PromptEngineeringStudio";
+import TestPrompt from "./components/TestPrompt/TestPrompt";
 import "./App.css";
-import { fetchSystemMessage, resetSession, pollResult, callGpt, addMessage } from './apiUtils';
+import { resetSession } from "./apiUtils";
+
+const theme = extendTheme({
+  fonts: {
+    heading: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
+    body: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
+  },
+  styles: {
+    global: {
+      body: {
+        bg: "#fafafa",
+        color: "#1a1a1a",
+      },
+    },
+  },
+  components: {
+    Card: {
+      baseStyle: {
+        container: {
+          borderRadius: "4px",
+          border: "1px solid #e5e5e5",
+        },
+      },
+    },
+    Button: {
+      baseStyle: {
+        borderRadius: "4px",
+        fontWeight: "500",
+        fontSize: "sm",
+        letterSpacing: "-0.01em",
+      },
+      sizes: {
+        sm: {
+          fontSize: "xs",
+          px: 3,
+          py: 2,
+          h: "32px",
+        },
+        md: {
+          fontSize: "sm",
+          px: 4,
+          py: 2.5,
+          h: "40px",
+        },
+        lg: {
+          fontSize: "sm",
+          px: 6,
+          py: 3,
+          h: "48px",
+        },
+      },
+    },
+    Input: {
+      baseStyle: {
+        field: {
+          borderRadius: "4px",
+        },
+      },
+    },
+    Textarea: {
+      baseStyle: {
+        borderRadius: "4px",
+      },
+    },
+    Select: {
+      baseStyle: {
+        field: {
+          borderRadius: "4px",
+        },
+      },
+    },
+  },
+});
 
 function App() {
-  const [inputHeight, setInputHeight] = useState(0);
-  const [message, setMessage] = useState("");
-  const [messages, setMessages] = useState([]);
   const [apiEndpoint, setApiEndpoint] = useState("");
   const [pollingInterval, setPollingInterval] = useState(200);
-  const chatRef = useRef(null);
   const [systemMessage, setSystemMessage] = useState("");
 
-	useEffect(() => {
-	  const fetchInitialSystemMessage = async () => {
-		try {
-		  const message = await fetchSystemMessage(apiEndpoint);
-		  setSystemMessage(message);
-		} catch (error) {
-		  console.error("Error fetching system message:", error);
-		}
-	  };
-	  
-	  fetchInitialSystemMessage();
-	}, [apiEndpoint]);
-
-  
   return (
-    <Router>
-      <div className="App">
-        <Navbar onResetSession={() => () => resetSession(apiEndpoint, setMessages)} />
-        <Routes>
-          <Route
-            path="/settings"
-            element={
-              <Settings
-                apiEndpoint={apiEndpoint}
-                pollingInterval={pollingInterval}
-                setApiEndpoint={setApiEndpoint}
-                setPollingInterval={setPollingInterval}
-                systemMessage={systemMessage}
-                setSystemMessage={setSystemMessage}
-              />
-            }
-          />
-          <Route
-            path="/"
-            element={
-              <>
-                <div className="chat-container">
-                  <ChatInfo messages={messages} />
-                  <Chat messages={messages} />
-                  <InputForm
-					          onUserMessage={(content) => callGpt(apiEndpoint, content, pollingInterval, setMessage, setMessages)}
-                    onAiMessage={(message) => addMessage(message, "ai", setMessages)}
-					          message={message}
-					          setMessage={setMessage}
-                  />
-                </div>
-              </>
-            }
-          />
-        </Routes>
-      </div>
-    </Router>
+    <ChakraProvider theme={theme}>
+      <Router>
+        <div className="App">
+          <Navbar onResetSession={() => () => resetSession(apiEndpoint, () => {})} />
+          <Routes>
+            <Route
+              path="/settings"
+              element={
+                <Settings
+                  apiEndpoint={apiEndpoint}
+                  pollingInterval={pollingInterval}
+                  setApiEndpoint={setApiEndpoint}
+                  setPollingInterval={setPollingInterval}
+                  systemMessage={systemMessage}
+                  setSystemMessage={setSystemMessage}
+                />
+              }
+            />
+            <Route
+              path="/chat"
+              element={<TestPrompt apiEndpoint={apiEndpoint} />}
+            />
+            <Route
+              path="/"
+              element={
+                <PromptEngineeringStudio
+                  apiEndpoint={apiEndpoint}
+                  setApiEndpoint={setApiEndpoint}
+                />
+              }
+            />
+          </Routes>
+        </div>
+      </Router>
+    </ChakraProvider>
   );
 }
 
