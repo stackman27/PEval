@@ -37,12 +37,14 @@ function InputForm({ onUserMessage, onAiMessage, message, setMessage }) {
         />
         <div className="button-container">
           <button type="button"
+            className="send-button user-button"
             onClick={handleUserMessage}
           >
             Send as User
           </button>
           <button
             type="button"
+            className="send-button ai-button"
             onClick={handleAiMessage}
           >
             Send as AI
