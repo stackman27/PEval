@@ -44,6 +44,7 @@ def get_items():
 def get_prompts():
     """Get all prompt versions"""
     prompts = []
+    existing_versions = set()
     
     # Load prompts from files first
     if os.path.exists(PROMPTS_DIR):
@@ -53,12 +54,15 @@ def get_prompts():
                 try:
                     with open(filepath, "r") as f:
                         prompt_data = json.load(f)
-                        prompts.append(prompt_data)
+                        version = prompt_data.get("version")
+                        # Only add if version doesn't already exist
+                        if version and version not in existing_versions:
+                            prompts.append(prompt_data)
+                            existing_versions.add(version)
                 except Exception as e:
                     print(f"Error loading prompt {filename}: {e}")
     
-    # Always include default sample prompts (only if not already loaded from files)
-    existing_versions = {p.get("version") for p in prompts}
+    # Always include default sample prompts (only if version doesn't already exist)
     default_prompts = [
         {
             "name": "Helpful Assistant",
@@ -102,24 +106,13 @@ def get_prompts():
         }
     ]
     
-    # Load additional prompts from files
-    if os.path.exists(PROMPTS_DIR):
-        for filename in os.listdir(PROMPTS_DIR):
-            if filename.endswith(".json"):
-                filepath = os.path.join(PROMPTS_DIR, filename)
-                try:
-                    with open(filepath, "r") as f:
-                        prompt_data = json.load(f)
-                        # Only add if not already in default prompts (by version)
-                        if not any(p["version"] == prompt_data.get("version") for p in default_prompts):
-                            prompts.append(prompt_data)
-                except Exception as e:
-                    print(f"Error loading prompt {filename}: {e}")
+    # Add default prompts only if their versions don't exist
+    for default_prompt in default_prompts:
+        if default_prompt.get("version") not in existing_versions:
+            prompts.append(default_prompt)
+            existing_versions.add(default_prompt.get("version"))
     
-    # Combine default prompts with file-based prompts
-    all_prompts = default_prompts + prompts
-    
-    return jsonify({"prompts": all_prompts})
+    return jsonify({"prompts": prompts})
 
 @app.route("/api/prompts", methods=["POST"])
 def create_prompt():
@@ -224,7 +217,7 @@ def set_active_version():
 @app.route("/api/evals/scores", methods=["GET"])
 def get_eval_scores():
     """Get evaluation scores for all versions"""
-    return jsonify(EVAL_SCORES)
+    return jsonify({"scores": EVAL_SCORES})
 
 @app.route("/api/evals/run", methods=["POST"])
 def run_eval():

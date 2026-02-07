@@ -54,17 +54,26 @@ function TestPrompt({ apiEndpoint }) {
   const loadPrompts = async () => {
     try {
       const promptsList = await fetchPrompts(apiEndpoint);
-      setPrompts(promptsList);
-      if (promptsList.length > 0 && !selectedPromptVersion) {
+      // Deduplicate prompts by version to prevent duplicate keys
+      const uniquePrompts = [];
+      const seenVersions = new Set();
+      for (const prompt of promptsList || []) {
+        if (prompt && prompt.version && !seenVersions.has(prompt.version)) {
+          uniquePrompts.push(prompt);
+          seenVersions.add(prompt.version);
+        }
+      }
+      setPrompts(uniquePrompts);
+      if (uniquePrompts.length > 0 && !selectedPromptVersion) {
         // Auto-select staging version if available
         const versions = await fetchActiveVersions(apiEndpoint);
         if (versions.staging) {
           setSelectedPromptVersion(versions.staging);
-          const prompt = promptsList.find((p) => p.version === versions.staging);
+          const prompt = uniquePrompts.find((p) => p.version === versions.staging);
           if (prompt) setSelectedPrompt(prompt);
-        } else if (promptsList.length > 0) {
-          setSelectedPromptVersion(promptsList[0].version);
-          setSelectedPrompt(promptsList[0]);
+        } else if (uniquePrompts.length > 0) {
+          setSelectedPromptVersion(uniquePrompts[0].version);
+          setSelectedPrompt(uniquePrompts[0]);
         }
       }
     } catch (error) {
@@ -114,15 +123,6 @@ function TestPrompt({ apiEndpoint }) {
       return;
     }
 
-    const userMessage = {
-      id: Date.now(),
-      sender: "user",
-      content: inputMessage,
-      timestamp: new Date().toLocaleTimeString(),
-    };
-
-    setMessages((prev) => [...prev, userMessage]);
-    setInputMessage("");
     setIsLoading(true);
 
     try {
@@ -137,14 +137,12 @@ function TestPrompt({ apiEndpoint }) {
       });
 
       // Call GPT with the selected prompt
-      const userMsg = inputMessage;
-      await callGpt(apiEndpoint, userMsg, pollingInterval, (msg) => {}, (msgs) => {
-        setMessages((prev) => {
-          const aiMessages = msgs.filter((m) => m.sender === "ai");
-          return [...prev, ...aiMessages];
-        });
-        setIsLoading(false);
-      });
+      // Note: callGpt adds the user message and manages AI responses via setMessages
+      await callGpt(apiEndpoint, inputMessage, pollingInterval, setInputMessage, setMessages);
+      
+      // Note: isLoading will be managed by the polling completion
+      // For now, set it to false after a short delay to allow polling to start
+      setTimeout(() => setIsLoading(false), 100);
     } catch (error) {
       console.error("Failed to send message:", error);
       setIsLoading(false);

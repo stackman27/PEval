@@ -23,7 +23,7 @@ export const pollResult = async (apiEndpoint, result_id, messageID, pollingInter
       const response = await fetch(`${apiEndpoint}/api/results/${result_id}`);
       const data = await response.json();
 
-      addMessage(data.message, "AI", setMessages, messageID);
+      addMessage(data.message, "ai", setMessages, messageID);
       if (!data.completed) {
         setTimeout(() => pollResult(apiEndpoint, result_id, messageID, pollingInterval, setMessages), pollingInterval);
       }

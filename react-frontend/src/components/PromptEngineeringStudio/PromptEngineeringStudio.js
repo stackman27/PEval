@@ -182,6 +182,13 @@ function PromptEngineeringStudio({ apiEndpoint, setApiEndpoint }) {
       loadPrompts();
       loadActiveVersions();
       loadEvalScores();
+    } else {
+      // Reset state when endpoint is cleared
+      setPrompts([]);
+      setActiveVersions({ staging: null, prod: null });
+      setEvalScores({});
+      setSelectedStaging("");
+      setSelectedProd("");
     }
   }, [apiEndpoint]);
 
@@ -197,20 +204,37 @@ function PromptEngineeringStudio({ apiEndpoint, setApiEndpoint }) {
   };
 
   const loadPrompts = async () => {
-    const promptsList = await fetchPrompts(apiEndpoint);
-    setPrompts(promptsList);
+    try {
+      const promptsList = await fetchPrompts(apiEndpoint);
+      setPrompts(promptsList || []);
+    } catch (error) {
+      console.error("Failed to load prompts:", error);
+      setPrompts([]);
+    }
   };
 
   const loadActiveVersions = async () => {
-    const versions = await fetchActiveVersions(apiEndpoint);
-    setActiveVersions(versions);
-    setSelectedStaging(versions.staging || "");
-    setSelectedProd(versions.prod || "");
+    try {
+      const versions = await fetchActiveVersions(apiEndpoint);
+      setActiveVersions(versions || { staging: null, prod: null });
+      setSelectedStaging(versions?.staging || "");
+      setSelectedProd(versions?.prod || "");
+    } catch (error) {
+      console.error("Failed to load active versions:", error);
+      setActiveVersions({ staging: null, prod: null });
+      setSelectedStaging("");
+      setSelectedProd("");
+    }
   };
 
   const loadEvalScores = async () => {
-    const scores = await fetchEvalScores(apiEndpoint);
-    setEvalScores(scores);
+    try {
+      const scores = await fetchEvalScores(apiEndpoint);
+      setEvalScores(scores || {});
+    } catch (error) {
+      console.error("Failed to load eval scores:", error);
+      setEvalScores({});
+    }
   };
 
   const handleStagingChange = async (e) => {
@@ -357,9 +381,9 @@ function PromptEngineeringStudio({ apiEndpoint, setApiEndpoint }) {
     return "Poor";
   };
 
-  const stagingScore = selectedStaging ? evalScores[selectedStaging] : null;
-  const prodScore = selectedProd ? evalScores[selectedProd] : null;
-  const scoreImprovement = stagingScore && prodScore ? stagingScore - prodScore : null;
+  const stagingScore = selectedStaging && evalScores ? evalScores[selectedStaging] : null;
+  const prodScore = selectedProd && evalScores ? evalScores[selectedProd] : null;
+  const scoreImprovement = stagingScore != null && prodScore != null ? stagingScore - prodScore : null;
 
   return (
     <Box minH="100vh" bg="#fafafa" pb={8}>
@@ -393,7 +417,7 @@ function PromptEngineeringStudio({ apiEndpoint, setApiEndpoint }) {
                   <StatLabel color="#666" fontSize="xs" fontWeight="500" textTransform="uppercase" letterSpacing="0.05em">
                     Evaluations
                   </StatLabel>
-                  <StatNumber fontSize="2xl" color="#1a1a1a" fontWeight="600">{Object.keys(evalScores).length}</StatNumber>
+                  <StatNumber fontSize="2xl" color="#1a1a1a" fontWeight="600">{evalScores ? Object.keys(evalScores).length : 0}</StatNumber>
                 </Stat>
               </HStack>
             </Flex>
@@ -472,7 +496,7 @@ function PromptEngineeringStudio({ apiEndpoint, setApiEndpoint }) {
                                   thickness="8px"
                                 >
                                   <CircularProgressLabel fontSize="2xl" fontWeight="bold">
-                                    {stagingScore.toFixed(1)}
+                                    {stagingScore != null ? stagingScore.toFixed(1) : "N/A"}
                                   </CircularProgressLabel>
                                 </CircularProgress>
                                 <Text fontSize="xs" color="gray.500" textTransform="uppercase">
@@ -502,7 +526,7 @@ function PromptEngineeringStudio({ apiEndpoint, setApiEndpoint }) {
                                   thickness="8px"
                                 >
                                   <CircularProgressLabel fontSize="2xl" fontWeight="bold">
-                                    {prodScore.toFixed(1)}
+                                    {prodScore != null ? prodScore.toFixed(1) : "N/A"}
                                   </CircularProgressLabel>
                                 </CircularProgress>
                                 <Text fontSize="xs" color="gray.500" textTransform="uppercase">
@@ -524,7 +548,7 @@ function PromptEngineeringStudio({ apiEndpoint, setApiEndpoint }) {
                                 {scoreImprovement > 0 ? <FiTrendingUp /> : <FiTrendingDown />}
                                 <Text>
                                   {scoreImprovement > 0 ? "+" : ""}
-                                  {scoreImprovement.toFixed(1)} point improvement
+                                  {scoreImprovement != null ? scoreImprovement.toFixed(1) : "0"} point improvement
                                 </Text>
                               </HStack>
                             </Badge>
@@ -613,7 +637,7 @@ function PromptEngineeringStudio({ apiEndpoint, setApiEndpoint }) {
                                       fontWeight="600"
                                       borderRadius="2px"
                                     >
-                                      {score.toFixed(1)}
+                                      {score != null ? score.toFixed(1) : "N/A"}
                                     </Badge>
                                   ) : (
                                     <Badge bg="#f5f5f5" color="#999" fontSize="xs" px={2} py={1} fontWeight="500" borderRadius="2px" border="1px solid #e5e5e5">
@@ -757,7 +781,7 @@ function PromptEngineeringStudio({ apiEndpoint, setApiEndpoint }) {
                                         fontWeight="600"
                                         borderRadius="2px"
                                       >
-                                        {score.toFixed(1)}/100
+                                        {score != null ? score.toFixed(1) : "N/A"}/100
                                       </Badge>
                                     </HStack>
                                   ) : (
@@ -852,7 +876,7 @@ function PromptEngineeringStudio({ apiEndpoint, setApiEndpoint }) {
                             {prompts.map((prompt) => (
                               <option key={prompt.version} value={prompt.version}>
                                 {prompt.name} ({prompt.version})
-                                {evalScores[prompt.version] && ` - ${evalScores[prompt.version].toFixed(1)}/100`}
+                                {evalScores && evalScores[prompt.version] != null && ` - ${evalScores[prompt.version].toFixed(1)}/100`}
                               </option>
                             ))}
                           </Select>
@@ -865,7 +889,7 @@ function PromptEngineeringStudio({ apiEndpoint, setApiEndpoint }) {
                                   Eval Score
                                 </Text>
                                 <Text fontSize="2xl" fontWeight="bold" color={`${getScoreColor(stagingScore)}.500`}>
-                                  {stagingScore.toFixed(1)}/100
+                                  {stagingScore != null ? stagingScore.toFixed(1) : "N/A"}/100
                                 </Text>
                               </Box>
                             )}
@@ -909,7 +933,7 @@ function PromptEngineeringStudio({ apiEndpoint, setApiEndpoint }) {
                             {prompts.map((prompt) => (
                               <option key={prompt.version} value={prompt.version}>
                                 {prompt.name} ({prompt.version})
-                                {evalScores[prompt.version] && ` - ${evalScores[prompt.version].toFixed(1)}/100`}
+                                {evalScores && evalScores[prompt.version] != null && ` - ${evalScores[prompt.version].toFixed(1)}/100`}
                               </option>
                             ))}
                           </Select>
@@ -1001,7 +1025,7 @@ function PromptEngineeringStudio({ apiEndpoint, setApiEndpoint }) {
                                   Staging
                                 </Text>
                                 <Text fontSize="2xl" fontWeight="bold" color={`${getScoreColor(stagingScore)}.500`}>
-                                  {stagingScore.toFixed(1)}
+                                  {stagingScore != null ? stagingScore.toFixed(1) : "N/A"}
                                 </Text>
                               </VStack>
                               <Text fontSize="2xl" color="gray.400">
@@ -1110,27 +1134,27 @@ function PromptEngineeringStudio({ apiEndpoint, setApiEndpoint }) {
                                 Evaluation Results
                               </Heading>
                               <Text color="gray.600">
-                                {evalResult.summary.prompt_name} ({evalResult.summary.prompt_version})
+                                {evalResult?.summary?.prompt_name || "N/A"} ({evalResult?.summary?.prompt_version || "N/A"})
                               </Text>
                               <Text fontSize="sm" color="gray.500" mt={1}>
-                                {evalResult.summary.timestamp}
+                                {evalResult?.summary?.timestamp || ""}
                               </Text>
                             </Box>
                             <VStack align="center" spacing={2}>
                               <Box
-                                bg={`${getScoreColor(evalResult.summary.average_score)}.100`}
+                                bg={`${getScoreColor(evalResult?.summary?.average_score || 0)}.100`}
                                 p={4}
                                 borderRadius="xl"
                                 border="3px solid"
-                                borderColor={`${getScoreColor(evalResult.summary.average_score)}.400`}
+                                borderColor={`${getScoreColor(evalResult?.summary?.average_score || 0)}.400`}
                               >
                                 <Text
                                   fontSize="5xl"
                                   fontWeight="extrabold"
-                                  color={`${getScoreColor(evalResult.summary.average_score)}.600`}
+                                  color={`${getScoreColor(evalResult?.summary?.average_score || 0)}.600`}
                                   lineHeight="1"
                                 >
-                                  {evalResult.summary.average_score.toFixed(1)}
+                                  {evalResult?.summary?.average_score != null ? evalResult.summary.average_score.toFixed(1) : "N/A"}
                                 </Text>
                               </Box>
                               <Text fontSize="xs" color="gray.500" textTransform="uppercase" fontWeight="bold">
@@ -1144,7 +1168,7 @@ function PromptEngineeringStudio({ apiEndpoint, setApiEndpoint }) {
                             <Card variant="outline" bg="blue.50">
                               <CardBody textAlign="center">
                                 <Text fontSize="4xl" fontWeight="bold" color="blue.600">
-                                  {evalResult.summary.total_fixtures}
+                                  {evalResult?.summary?.total_fixtures || 0}
                                 </Text>
                                 <Text fontSize="sm" color="gray.600" textTransform="uppercase" mt={2}>
                                   Total Fixtures
@@ -1156,9 +1180,9 @@ function PromptEngineeringStudio({ apiEndpoint, setApiEndpoint }) {
                                 <Text
                                   fontSize="4xl"
                                   fontWeight="bold"
-                                  color={`${getScoreColor(evalResult.summary.average_score)}.600`}
+                                  color={`${getScoreColor(evalResult?.summary?.average_score || 0)}.600`}
                                 >
-                                  {evalResult.summary.average_score.toFixed(1)}%
+                                  {evalResult?.summary?.average_score != null ? evalResult.summary.average_score.toFixed(1) : "N/A"}%
                                 </Text>
                                 <Text fontSize="sm" color="gray.600" textTransform="uppercase" mt={2}>
                                   Success Rate
@@ -1168,7 +1192,7 @@ function PromptEngineeringStudio({ apiEndpoint, setApiEndpoint }) {
                             <Card variant="outline" bg="purple.50">
                               <CardBody textAlign="center">
                                 <Text fontSize="4xl" fontWeight="bold" color="purple.600">
-                                  {evalResult.summary.results.filter((r) => r.score >= 80).length}
+                                  {evalResult?.summary?.results?.filter((r) => r.score >= 80).length || 0}
                                 </Text>
                                 <Text fontSize="sm" color="gray.600" textTransform="uppercase" mt={2}>
                                   Excellent (≥80)
@@ -1178,7 +1202,7 @@ function PromptEngineeringStudio({ apiEndpoint, setApiEndpoint }) {
                             <Card variant="outline" bg="orange.50">
                               <CardBody textAlign="center">
                                 <Text fontSize="4xl" fontWeight="bold" color="orange.600">
-                                  {evalResult.summary.results.filter((r) => r.score < 60).length}
+                                  {evalResult?.summary?.results?.filter((r) => r.score < 60).length || 0}
                                 </Text>
                                 <Text fontSize="sm" color="gray.600" textTransform="uppercase" mt={2}>
                                   Needs Work (&lt;60)
@@ -1200,10 +1224,10 @@ function PromptEngineeringStudio({ apiEndpoint, setApiEndpoint }) {
                                   { label: "Fair (40-59)", min: 40, max: 59, color: "orange" },
                                   { label: "Poor (0-39)", min: 0, max: 39, color: "red" },
                                 ].map((range) => {
-                                  const count = evalResult.summary.results.filter(
+                                  const count = evalResult?.summary?.results?.filter(
                                     (r) => r.score >= range.min && r.score <= range.max
-                                  ).length;
-                                  const percentage = (count / evalResult.summary.total_fixtures) * 100;
+                                  ).length || 0;
+                                  const percentage = evalResult?.summary?.total_fixtures ? (count / evalResult.summary.total_fixtures) * 100 : 0;
                                   return (
                                     <Box key={range.label}>
                                       <Flex justify="space-between" mb={1}>
@@ -1211,7 +1235,7 @@ function PromptEngineeringStudio({ apiEndpoint, setApiEndpoint }) {
                                           {range.label}
                                         </Text>
                                         <Text fontSize="sm" fontWeight="bold">
-                                          {count} ({percentage.toFixed(1)}%)
+                                          {count} ({percentage != null ? percentage.toFixed(1) : "0"}%)
                                         </Text>
                                       </Flex>
                                       <Progress
@@ -1264,7 +1288,7 @@ function PromptEngineeringStudio({ apiEndpoint, setApiEndpoint }) {
                                 </Tr>
                               </Thead>
                               <Tbody>
-                                {evalResult.summary.results.map((result) => (
+                                {evalResult?.summary?.results?.map((result) => (
                                   <Tr
                                     key={result.fixture_id}
                                     _hover={{ bg: "gray.50" }}
@@ -1289,7 +1313,7 @@ function PromptEngineeringStudio({ apiEndpoint, setApiEndpoint }) {
                                         px={3}
                                         py={1}
                                       >
-                                        {result.score.toFixed(1)}
+                                        {result.score != null ? result.score.toFixed(1) : "N/A"}
                                       </Badge>
                                     </Td>
                                     <Td>
@@ -1567,8 +1591,8 @@ function PromptEngineeringStudio({ apiEndpoint, setApiEndpoint }) {
               {evalResult && (
                 <VStack spacing={4} align="stretch">
                   <Box textAlign="center" p={6} bg="#f5f5f5" borderRadius="4px" border="1px solid #e5e5e5">
-                    <Text fontSize="4xl" fontWeight="bold" color={`${getScoreColor(evalResult.summary.average_score)}.600`}>
-                      {evalResult.summary.average_score.toFixed(1)}/100
+                    <Text fontSize="4xl" fontWeight="bold" color={`${getScoreColor(evalResult?.summary?.average_score || 0)}.600`}>
+                      {evalResult?.summary?.average_score != null ? evalResult.summary.average_score.toFixed(1) : "N/A"}/100
                     </Text>
                     <Text color="#666" fontSize="sm" fontWeight="500">Average Score</Text>
                   </Box>
