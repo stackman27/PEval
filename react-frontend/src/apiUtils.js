@@ -18,21 +18,34 @@ export const resetSession = async (apiEndpoint, setMessages) => {
 	});
 };
 
-export const pollResult = async (apiEndpoint, result_id, messageID, pollingInterval, setMessages) => {
+export const pollResult = async (apiEndpoint, result_id, messageID, pollingInterval, setMessages, setIsLoading = null) => {
     try {
       const response = await fetch(`${apiEndpoint}/api/results/${result_id}`);
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
       const data = await response.json();
 
-      addMessage(data.message, "ai", setMessages, messageID);
+      if (data.message) {
+        addMessage(data.message, "ai", setMessages, messageID);
+      }
+      
+      if (data.completed && setIsLoading) {
+        setIsLoading(false);
+      }
+      
       if (!data.completed) {
-        setTimeout(() => pollResult(apiEndpoint, result_id, messageID, pollingInterval, setMessages), pollingInterval);
+        setTimeout(() => pollResult(apiEndpoint, result_id, messageID, pollingInterval, setMessages, setIsLoading), pollingInterval);
       }
     } catch (error) {
-      console.error(error);
+      console.error("Error polling result:", error);
+      if (setIsLoading) {
+        setIsLoading(false);
+      }
     }
 };
 
-export const callGpt = async (apiEndpoint, content, pollingInterval, setMessage, setMessages) => {
+export const callGpt = async (apiEndpoint, content, pollingInterval, setMessage, setMessages, setIsLoading = null) => {
     // Store the last message ID
     addMessage(content, "user", setMessages);
     setMessage("");
@@ -49,13 +62,22 @@ export const callGpt = async (apiEndpoint, content, pollingInterval, setMessage,
         }),
       });
 
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
       const data = await response.json();
       const result_id = data.result_id;
-      const messageID = addMessage("", "AI", setMessages);
-	  console.log("messageId: " + messageID)
-      setTimeout(() => pollResult(apiEndpoint, result_id, messageID, pollingInterval, setMessages));
+      const messageID = addMessage("", "ai", setMessages);
+      console.log("messageId: " + messageID);
+      // Start polling immediately
+      pollResult(apiEndpoint, result_id, messageID, pollingInterval, setMessages, setIsLoading);
     } catch (error) {
-      console.error(error);
+      console.error("Error calling GPT:", error);
+      if (setIsLoading) {
+        setIsLoading(false);
+      }
+      throw error;
     }
 };
 

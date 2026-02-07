@@ -138,11 +138,7 @@ function TestPrompt({ apiEndpoint }) {
 
       // Call GPT with the selected prompt
       // Note: callGpt adds the user message and manages AI responses via setMessages
-      await callGpt(apiEndpoint, inputMessage, pollingInterval, setInputMessage, setMessages);
-      
-      // Note: isLoading will be managed by the polling completion
-      // For now, set it to false after a short delay to allow polling to start
-      setTimeout(() => setIsLoading(false), 100);
+      await callGpt(apiEndpoint, inputMessage, pollingInterval, setInputMessage, setMessages, setIsLoading);
     } catch (error) {
       console.error("Failed to send message:", error);
       setIsLoading(false);
