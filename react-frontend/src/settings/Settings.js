@@ -316,7 +316,7 @@ function Settings({
                               API Endpoint
                             </FormLabel>
                             <Input
-            value={apiEndpoint}
+                              value={apiEndpoint}
                               onChange={(e) => setApiEndpoint(e.target.value)}
                               placeholder="http://localhost:5000"
                               borderRadius="4px"
@@ -333,8 +333,8 @@ function Settings({
                               Polling Interval (ms)
                             </FormLabel>
                             <Input
-            type="number"
-            value={pollingInterval}
+                              type="number"
+                              value={pollingInterval}
                               onChange={(e) => setPollingInterval(parseInt(e.target.value) || 200)}
                               borderRadius="4px"
                               borderColor="#e5e5e5"
@@ -350,7 +350,7 @@ function Settings({
                               Default System Message
                             </FormLabel>
                             <Textarea
-            value={systemMessage}
+                              value={systemMessage}
                               onChange={(e) => setSystemMessage(e.target.value)}
                               rows={8}
                               placeholder="Enter default system message..."
@@ -397,7 +397,7 @@ function Settings({
                             </Button>
                           </HStack>
                         </VStack>
-      </form>
+                      </form>
                     </CardBody>
                   </Card>
                 </Box>
