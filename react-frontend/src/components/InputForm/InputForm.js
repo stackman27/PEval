@@ -38,6 +38,7 @@ function InputForm({ onUserMessage, onAiMessage, message, setMessage }) {
         <div className="button-container">
           <button type="button"
             onClick={handleUserMessage}
+            style={{ backgroundColor: 'green', color: 'white' }} // Added style for green button
           >
             Send as User
           </button>
