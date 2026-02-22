@@ -557,10 +557,10 @@ function PromptEngineeringStudio({ apiEndpoint, setApiEndpoint }) {
                       </CardBody>
                     </Card>
 
-                    {/* Quick Actions */}
+                    {/* Action Items */}
                     <Card>
                       <CardHeader>
-                        <Heading size="md">Quick Actions</Heading>
+                        <Heading size="md">Action Items</Heading>
                       </CardHeader>
                       <CardBody>
                         <VStack spacing={3}>
