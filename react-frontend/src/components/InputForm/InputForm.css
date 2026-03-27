@@ -27,3 +27,16 @@ button {
   height: 30px;
   margin-bottom: 5px;
 }
+
+.user-button {
+  background-color: blue;
+  color: white;
+  border: none;
+  padding: 10px 15px;
+  cursor: pointer;
+  border-radius: 5px;
+}
+
+.user-button:hover {
+  background-color: darkblue;
+}
