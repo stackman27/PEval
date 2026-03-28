@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import {
   Box,
   HStack,
@@ -10,18 +10,25 @@ import {
   MenuButton,
   MenuList,
   MenuItem,
-  useColorModeValue,
   Divider,
   Badge,
+  Avatar,
+  VStack,
 } from "@chakra-ui/react";
-import { FiMenu, FiSettings, FiMessageSquare, FiBarChart2, FiX } from "react-icons/fi";
+import { FiMenu, FiSettings, FiMessageSquare, FiBarChart2, FiUser } from "react-icons/fi";
 import PromptModal from '../Modals/PromptModal.jsx';
 import "./Navbar.css";
 
 function Navbar({ onResetSession }) {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [prompts, setPrompts] = useState([]);
+  const [userProfile, setUserProfile] = useState({
+    name: "User",
+    email: "user@example.com",
+    role: "Developer",
+  });
   const location = useLocation();
+  const navigate = useNavigate();
 
   useEffect(() => {
     const fetchPrompts = async () => {
@@ -37,6 +44,18 @@ function Navbar({ onResetSession }) {
     fetchPrompts();
   }, []);
 
+  useEffect(() => {
+    // Load user profile from localStorage so the toggle is consistent with Settings
+    const savedProfile = localStorage.getItem("peval_user_profile");
+    if (savedProfile) {
+      try {
+        setUserProfile(JSON.parse(savedProfile));
+      } catch (e) {
+        console.error("Failed to parse saved user profile:", e);
+      }
+    }
+  }, []);
+
   const handleOpenModal = () => {
     setIsModalOpen(true);
   };
@@ -46,7 +65,7 @@ function Navbar({ onResetSession }) {
   };
 
   const handleSelectPrompt = (prompt) => {
-    sendSystemMessage(prompt.prompt, "system");     
+    sendSystemMessage(prompt.prompt, "system");
     handleCloseModal();
   };
 
@@ -59,9 +78,9 @@ function Navbar({ onResetSession }) {
         },
         body: JSON.stringify({ prompt, role }),
       });
-  
+
       const data = await response.json();
-  
+
       if (data.status === 'ok') {
         console.log('System message set successfully');
       } else {
@@ -73,6 +92,10 @@ function Navbar({ onResetSession }) {
   };
 
   const isActive = (path) => location.pathname === path;
+
+  const handleGoToSettings = () => {
+    navigate("/settings");
+  };
 
   return (
     <>
@@ -179,64 +202,155 @@ function Navbar({ onResetSession }) {
             </Link>
           </HStack>
 
-          {/* Actions Menu */}
-          <Menu>
-            <MenuButton
-              as={IconButton}
-              icon={<FiMenu />}
-              variant="ghost"
-              size="sm"
-              color="#666"
-              _hover={{
-                bg: "#f5f5f5",
-                color: "#1a1a1a",
-              }}
-              borderRadius="4px"
-            />
-            <MenuList
-              bg="white"
-              border="1px solid #e5e5e5"
-              borderRadius="4px"
-              boxShadow="0 4px 12px rgba(0,0,0,0.1)"
-              py={2}
-              minW="180px"
-            >
-              <MenuItem
-                onClick={() => onResetSession()()}
-                fontSize="sm"
-                fontWeight="500"
-                color="#1a1a1a"
+          {/* Right side: User toggle + Actions Menu */}
+          <HStack spacing={3}>
+            {/* Top-bar User Toggle (persistent) */}
+            <Menu>
+              <MenuButton
+                as={Button}
+                variant="ghost"
+                size="sm"
+                borderRadius="999px"
+                px={2}
+                py={1}
+                className="navbar-user-toggle"
+                _hover={{ bg: "#f5f5f5" }}
+              >
+                <HStack spacing={2}>
+                  <Avatar
+                    name={userProfile.name}
+                    size="sm"
+                    bg="#1a1a1a"
+                    color="white"
+                  />
+                  <VStack
+                    spacing={0}
+                    align="flex-start"
+                    display={{ base: "none", md: "flex" }}
+                  >
+                    <Text fontSize="xs" fontWeight="600" color="#1a1a1a">
+                      {userProfile.name}
+                    </Text>
+                    <Text fontSize="xs" color="#999">
+                      {userProfile.role}
+                    </Text>
+                  </VStack>
+                </HStack>
+              </MenuButton>
+              <MenuList
+                bg="white"
+                border="1px solid #e5e5e5"
+                borderRadius="4px"
+                boxShadow="0 4px 12px rgba(0,0,0,0.1)"
+                py={2}
+                minW="220px"
+              >
+                <MenuItem
+                  fontSize="sm"
+                  fontWeight="500"
+                  color="#1a1a1a"
+                  _hover={{ bg: "#f5f5f5" }}
+                  icon={<FiUser size={16} />}
+                  onClick={handleGoToSettings}
+                >
+                  {"Profile & Settings"}
+                </MenuItem>
+              </MenuList>
+            </Menu>
+
+            {/* Actions / Hamburger Menu */}
+            <Menu>
+              <MenuButton
+                as={IconButton}
+                icon={<FiMenu />}
+                variant="ghost"
+                size="sm"
+                color="#666"
                 _hover={{
                   bg: "#f5f5f5",
+                  color: "#1a1a1a",
                 }}
+                borderRadius="4px"
+              />
+              <MenuList
+                bg="white"
+                border="1px solid #e5e5e5"
+                borderRadius="4px"
+                boxShadow="0 4px 12px rgba(0,0,0,0.1)"
                 py={2}
+                minW="200px"
               >
-                Reset Session
-              </MenuItem>
-              <MenuItem
-                onClick={handleOpenModal}
-                fontSize="sm"
-                fontWeight="500"
-                color="#1a1a1a"
-                _hover={{
-                  bg: "#f5f5f5",
-                }}
-                py={2}
-              >
-                Select Prompt
-              </MenuItem>
-              <Divider my={2} borderColor="#e5e5e5" />
-              <MenuItem
-                fontSize="xs"
-                color="#999"
-                fontWeight="400"
-                py={2}
-                isDisabled
-              >
-                Version 1.0.0
-              </MenuItem>
-            </MenuList>
-          </Menu>
+                {/* User section inside hamburger menu */}
+                <Box px={3} pb={2}>
+                  <HStack spacing={3}>
+                    <Avatar
+                      name={userProfile.name}
+                      size="sm"
+                      bg="#1a1a1a"
+                      color="white"
+                    />
+                    <VStack align="flex-start" spacing={0}>
+                      <Text fontSize="sm" fontWeight="600" color="#1a1a1a">
+                        {userProfile.name}
+                      </Text>
+                      <Text fontSize="xs" color="#666">
+                        {userProfile.email}
+                      </Text>
+                    </VStack>
+                  </HStack>
+                </Box>
+                <Divider my={2} borderColor="#e5e5e5" />
+
+                <MenuItem
+                  onClick={() => onResetSession()()}
+                  fontSize="sm"
+                  fontWeight="500"
+                  color="#1a1a1a"
+                  _hover={{
+                    bg: "#f5f5f5",
+                  }}
+                  py={2}
+                >
+                  Reset Session
+                </MenuItem>
+                <MenuItem
+                  onClick={handleOpenModal}
+                  fontSize="sm"
+                  fontWeight="500"
+                  color="#1a1a1a"
+                  _hover={{
+                    bg: "#f5f5f5",
+                  }}
+                  py={2}
+                >
+                  Select Prompt
+                </MenuItem>
+                <MenuItem
+                  onClick={handleGoToSettings}
+                  fontSize="sm"
+                  fontWeight="500"
+                  color="#1a1a1a"
+                  _hover={{
+                    bg: "#f5f5f5",
+                  }}
+                  py={2}
+                  icon={<FiSettings size={16} />}
+                >
+                  Settings
+                </MenuItem>
+                <Divider my={2} borderColor="#e5e5e5" />
+                <MenuItem
+                  fontSize="xs"
+                  color="#999"
+                  fontWeight="400"
+                  py={2}
+                  isDisabled
+                >
+                  Version 1.0.0
+                </MenuItem>
+              </MenuList>
+            </Menu>
+          </HStack>
         </HStack>
       </Box>
       <PromptModal
@@ -244,7 +358,7 @@ function Navbar({ onResetSession }) {
         prompts={prompts}
         onSelectPrompt={handleSelectPrompt}
         onClose={handleCloseModal}
-      />      
+      />
     </>
   );
 }

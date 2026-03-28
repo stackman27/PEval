@@ -89,6 +89,7 @@ function App() {
     <ChakraProvider theme={theme}>
       <Router>
         <div className="App">
+          {/* Navbar is rendered once here so the user toggle persists across all pages */}
           <Navbar onResetSession={() => () => resetSession(apiEndpoint, () => {})} />
           <Routes>
             <Route
